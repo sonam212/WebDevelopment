@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Simple Weather App</title>
+<style>
+  body{font-family:Inter,system-ui,Arial;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;background:linear-gradient(180deg,#e8f0ff,#f9fbff);padding:28px}
+  .card{width:100%;max-width:640px;background:#fff;border-radius:12px;box-shadow:0 12px 36px rgba(16,24,40,0.08);padding:20px}
+  .row{display:flex;gap:12px;align-items:center}
+  input{flex:1;padding:10px;border-radius:8px;border:1px solid #eef2ff}
+  button{padding:10px 14px;border-radius:8px;border:none;background:#2563eb;color:#fff;cursor:pointer}
+  .result{margin-top:18px;display:flex;gap:18px;align-items:center}
+  .temp{font-size:2.4rem;font-weight:700}
+  .muted{color:#6b7280}
+  .forecast{display:flex;gap:12px;margin-top:12px;overflow:auto}
+  .fcard{min-width:110px;padding:10px;border-radius:10px;background:#fbfdff;border:1px solid #eef4ff;text-align:center}
+  .error{color:#ef4444}
+  @media (max-width:520px){.row{flex-direction:column;align-items:stretch} .result{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="card" role="region" aria-label="Weather app">
+  <h2 style="margin:0 0 8px 0">Weather App</h2>
+  <div class="small muted" style="margin-bottom:12px">Enter a city and get current weather (OpenWeatherMap)</div>
+
+  <div class="row">
+    <input id="cityInput" placeholder="e.g. Mumbai" />
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <div id="status" style="margin-top:12px"></div>
+
+  <div id="output" style="display:none">
+    <div class="result" id="current">
+      <div>
+        <div id="cityName" style="font-weight:700"></div>
+        <div class="muted" id="desc"></div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div class="temp" id="temp"></div>
+        <div class="muted" id="feels"></div>
+      </div>
+    </div>
+
+    <div id="extra" style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap">
+      <div class="fcard">Humidity: <div id="hum" style="font-weight:700"></div></div>
+      <div class="fcard">Wind: <div id="wind" style="font-weight:700"></div></div>
+      <div class="fcard">Pressure: <div id="press" style="font-weight:700"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const key = '9a76d20d14aca2250970c61e4f9bb344'; // <-- REPLACE this with your API key
+  const searchBtn = document.getElementById('searchBtn');
+  const cityInput = document.getElementById('cityInput');
+  const statusEl = document.getElementById('status');
+  const output = document.getElementById('output');
+
+  function showStatus(msg, type){
+    statusEl.innerHTML = msg ? `<div class="${type==='err'?'error':''}">${msg}</div>` : '';
+  }
+
+  async function fetchWeather(city){
+    showStatus('Loading...');
+    output.style.display = 'none';
+    try{
+      if(!key || key === 'YOUR_OPENWEATHERMAP_API_KEY') {
+        // fallback: mock data (so app works without a key)
+        showStatus('No API key provided — showing mock data. To use real data, add your OpenWeatherMap API key in the code.', '');
+        await new Promise(r=>setTimeout(r,600));
+        const sample = {
+          name: city,
+          weather:[{description:'clear sky'}],
+          main:{temp:30,feels_like:31,humidity:50,pressure:1012},
+          wind:{speed:3.6}
+        };
+        display(sample);
+        return;
+      }
+
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${key}&units=metric`;
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('City not found or API error');
+      const data = await res.json();
+      display(data);
+    } catch(err){
+      showStatus('Error: ' + err.message, 'err');
+    }
+  }
+
+  function display(data){
+    showStatus('');
+    output.style.display = 'block';
+    document.getElementById('cityName').textContent = `${data.name}`;
+    document.getElementById('desc').textContent = (data.weather && data.weather[0] && data.weather[0].description) || '';
+    document.getElementById('temp').textContent = Math.round(data.main.temp) + '°C';
+    document.getElementById('feels').textContent = 'Feels like ' + Math.round(data.main.feels_like) + '°C';
+    document.getElementById('hum').textContent = data.main.humidity + '%';
+    document.getElementById('wind').textContent = (data.wind.speed || 0) + ' m/s';
+    document.getElementById('press').textContent = data.main.pressure + ' hPa';
+  }
+
+  searchBtn.addEventListener('click', ()=> {
+    const city = cityInput.value.trim();
+    if(!city){ showStatus('Enter a city name', 'err'); cityInput.focus(); return; }
+    fetchWeather(city);
+  });
+
+  cityInput.addEventListener('keydown', e=>{ if(e.key==='Enter') searchBtn.click(); });
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Expense Tracker</title>
+<style>
+  :root {
+    --bg:#f4f7fb; --card:#fff; --accent:#2563eb; --red:#ef4444; --green:#10b981;
+    --muted:#6b7280; --glass: rgba(255,255,255,0.6);
+  }
+  *{box-sizing:border-box;font-family:Inter,system-ui,Arial;}
+  body{margin:0;background:linear-gradient(180deg,#e6f0ff 0%,var(--bg) 100%);padding:28px;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+  .wrap{width:100%;max-width:980px;background:var(--card);border-radius:14px;box-shadow:0 10px 30px rgba(30,41,59,0.08);overflow:hidden;display:grid;grid-template-columns:1fr 380px;}
+  header{padding:20px 28px;border-bottom:1px solid #eef2ff;display:flex;align-items:center;gap:12px}
+  header h1{margin:0;font-size:1.1rem}
+  .main{padding:20px 28px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .input, .select{padding:10px 12px;border-radius:8px;border:1px solid #e6eefc;background:var(--glass);min-width:0}
+  .input[type="number"]{width:120px}
+  button.btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+  button.btn:active{transform:translateY(1px)}
+  .list{max-height:52vh;overflow:auto;padding-right:8px}
+  .entry{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;margin-bottom:10px;border:1px solid #f0f4ff;background:linear-gradient(#fff,#fbfdff);box-shadow:0 2px 6px rgba(16,24,40,0.03)}
+  .entry .meta{display:flex;gap:12px;align-items:center}
+  .tag{font-size:0.85rem;padding:6px 8px;border-radius:8px;background:#f3f4f6;color:var(--muted)}
+  .amount{font-weight:700}
+  .amount.negative{color:var(--red)}
+  .amount.positive{color:var(--green)}
+  .side{background:linear-gradient(180deg,#fbfcff,#f7fbff);padding:18px;border-left:1px solid #eef2ff}
+  .totals{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+  .total-row{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;background:#fff;border:1px solid #eef2ff}
+  .small{font-size:0.9rem;color:var(--muted)}
+  .clear{background:#fff;border:1px solid #f1f1f1;padding:8px;border-radius:8px;cursor:pointer}
+  footer{padding:12px 20px;background:#f8fbff;text-align:center;font-size:0.9rem;color:var(--muted)}
+  @media (max-width:880px){.wrap{grid-template-columns:1fr;}.side{order:-1}}
+</style>
+</head>
+<body>
+<div class="wrap" role="application" aria-label="Expense tracker">
+  <div>
+    <header>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#2563eb"/><path d="M7 12h10" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <div>
+        <h1>Expense Tracker</h1>
+        <div class="small">Add incomes (positive) and expenses (negative).</div>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="controls" aria-hidden="false">
+        <input id="desc" class="input" placeholder="Description (e.g., Lunch)" />
+        <input id="amount" type="number" class="input" placeholder="Amount (use - for expense)" />
+        <select id="category" class="select">
+          <option value="general">General</option>
+          <option value="food">Food</option>
+          <option value="transport">Transport</option>
+          <option value="salary">Salary</option>
+          <option value="other">Other</option>
+        </select>
+        <button id="addBtn" class="btn">Add</button>
+        <button id="clearAll" class="clear">Clear All</button>
+      </div>
+
+      <section aria-live="polite">
+        <h3 class="small">Transactions</h3>
+        <div class="list" id="transactions"></div>
+      </section>
+    </main>
+    <footer>Data saved locally to your browser (localStorage).</footer>
+  </div>
+
+  <aside class="side">
+    <div class="totals">
+      <div class="total-row">
+        <div><div class="small">Balance</div><div id="balance" style="font-size:1.8rem;font-weight:700">₹0.00</div></div>
+      </div>
+      <div class="total-row">
+        <div><div class="small">Income</div><div id="income">₹0.00</div></div>
+        <div><div class="small">Expense</div><div id="expense">₹0.00</div></div>
+      </div>
+    </div>
+
+    <div style="margin-top:8px;">
+      <h4 class="small">Quick actions</h4>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="addSalary" class="btn">+ Salary ₹50,000</button>
+        <button id="addFood" class="clear">- Food ₹150</button>
+      </div>
+    </div>
+
+    <div style="margin-top:18px">
+      <h4 class="small">Filters</h4>
+      <select id="filterCat" class="select" style="width:100%;margin-top:8px">
+        <option value="all">All</option>
+        <option value="salary">Salary</option>
+        <option value="food">Food</option>
+        <option value="transport">Transport</option>
+        <option value="general">General</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function(){
+  const descEl = document.getElementById('desc');
+  const amountEl = document.getElementById('amount');
+  const categoryEl = document.getElementById('category');
+  const addBtn = document.getElementById('addBtn');
+  const transactionsEl = document.getElementById('transactions');
+  const balanceEl = document.getElementById('balance');
+  const incomeEl = document.getElementById('income');
+  const expenseEl = document.getElementById('expense');
+  const clearAllBtn = document.getElementById('clearAll');
+  const addSalaryBtn = document.getElementById('addSalary');
+  const addFoodBtn = document.getElementById('addFood');
+  const filterCat = document.getElementById('filterCat');
+
+  let transactions = JSON.parse(localStorage.getItem('transactions_v1')||'[]');
+
+  function save(){ localStorage.setItem('transactions_v1', JSON.stringify(transactions)); }
+  function formatCurrency(n){ const sign = n<0 ? '-' : ''; return sign + '₹' + Math.abs(n).toFixed(2); }
+
+  function render(filter='all'){
+    transactionsEl.innerHTML = '';
+    const list = filter === 'all' ? transactions : transactions.filter(t => t.category === filter);
+    if(list.length === 0){
+      transactionsEl.innerHTML = '<div class="small" style="padding:12px;color:var(--muted)">No transactions yet.</div>';
+    } else {
+      list.slice().reverse().forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'entry';
+        div.innerHTML = `
+          <div class="meta">
+            <div style="display:flex;flex-direction:column">
+              <strong>${escapeHtml(t.desc)}</strong>
+              <span class="small">${new Date(t.id).toLocaleString()}</span>
+            </div>
+            <div class="tag">${t.category}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="amount ${t.amount<0 ? 'negative' : 'positive'}">${formatCurrency(t.amount)}</div>
+            <button data-id="${t.id}" class="clear btn-delete" style="padding:6px 8px;border-radius:8px;border:1px solid #eee;background:#fff">Delete</button>
+          </div>
+        `;
+        transactionsEl.appendChild(div);
+      });
+    }
+    updateTotals();
+  }
+
+  function updateTotals(){
+    const inc = transactions.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+    const exp = transactions.filter(t=>t.amount<0).reduce((s,t)=>s+t.amount,0);
+    const bal = inc + exp;
+    incomeEl.textContent = formatCurrency(inc);
+    expenseEl.textContent = formatCurrency(Math.abs(exp));
+    balanceEl.textContent = formatCurrency(bal);
+  }
+
+  function addTransaction(desc, amount, category){
+    const tx = { id: Date.now(), desc, amount: Number(amount), category };
+    transactions.push(tx);
+    save();
+    render(filterCat.value);
+  }
+
+  addBtn.addEventListener('click', ()=>{
+    const desc = descEl.value.trim() || 'Untitled';
+    const amt = Number(amountEl.value);
+    if(!amountEl.value || isNaN(amt)){ alert('Enter a valid amount (use negative for expense)'); amountEl.focus(); return; }
+    addTransaction(desc, amt, categoryEl.value);
+    descEl.value = ''; amountEl.value = ''; descEl.focus();
+  });
+
+  transactionsEl.addEventListener('click', e=>{
+    if(e.target.matches('.btn-delete')){
+      const id = Number(e.target.dataset.id);
+      transactions = transactions.filter(t => t.id !== id);
+      save();
+      render(filterCat.value);
+    }
+  });
+
+  clearAllBtn.addEventListener('click', ()=>{
+    if(!confirm('Clear all transactions?')) return;
+    transactions = [];
+    save();
+    render();
+  });
+
+  addSalaryBtn.addEventListener('click', ()=> addTransaction('Salary', 50000, 'salary'));
+  addFoodBtn.addEventListener('click', ()=> addTransaction('Food', -150, 'food'));
+
+  filterCat.addEventListener('change', ()=> render(filterCat.value));
+
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  // init
+  render();
+  // focus on desc
+  descEl.focus();
+})();
+</script>
+</body>
+</html>
